@@ -1,9 +1,10 @@
-clear; % clears the Workspace
+function displayPopulationLDA_FlickerStimuli(regFlag,transformType,numFolds,useEqualStimRepsFlag)
+
 close all; % closes any open Figures
 
 % Set FolderSourceString automatically; add files & folders to MATLAB path
 fileNameWithPath = mfilename('fullpath');
-[filePath,name,ext] = fileparts(fileNameWithPath);
+[filePath,~,~] = fileparts(fileNameWithPath);
 cd(filePath); cd ..
 addpath(genpath(pwd));
 folderSourceString = fullfile(pwd,'analyzedData');
@@ -12,10 +13,10 @@ if ~exist('gridType','var');            gridType = 'EEG';                       
 if ~exist('protocolType','var');        protocolType = 'SRC-Long';                              end
 if ~exist('badTrialStr','var');         badTrialStr = 'v10';                                    end
 
-regFlag = 0;
-transformType = 3;
-numFolds = 5;
-useEqualStimRepsFlag = 0;
+% regFlag = 2;
+% transformType = 3;
+% numFolds = 2;
+% useEqualStimRepsFlag = 1;
 
 tapers = [1 1];
 fileName = fullfile(folderSourceString,['powerData_',protocolType,'_',gridType,'_allSubjects_N26_tapers_' num2str(tapers(2)) '_badTrial_' badTrialStr '.mat']);
@@ -25,24 +26,24 @@ else
     error('Datafile Not Available! Check Data Path!')
 end
 
-[data_allElecs, data_ElecGroupWise] = getDataForLDA(1:26,powerData_AllElecs,powerData_GroupWise);
+[~, data_ElecGroupWise] = getDataForLDA(1:26,powerData_AllElecs,powerData_GroupWise);
 
-dPrimeVals = getProjection(data_allElecs,data_ElecGroupWise,regFlag,transformType,numFolds,useEqualStimRepsFlag);
+dPrimeVals = getProjection_v2(data_ElecGroupWise,regFlag,transformType,numFolds,useEqualStimRepsFlag);
 nanFlag = 'omitnan'; % NaN Values are processed using this flag during averaging
 
 % Display options
 hFig = figure;
 set(hFig,'units','normalized','outerPosition',[0 0 1 1]);
-hPlot = getPlotHandles(2,3,[0.1 0.1, 0.8 0.8],0.1,0.1,0);
+hPlot = getPlotHandles(2,3,[0.1 0.1, 0.8 0.8],0.1,0.14,0); linkaxes(hPlot)
 fontSize = 14;
 tickLength = get(hPlot(1,1),'TickLength');
 
 colors = {'k','r','c','m'};
 neuralMeasureLabels = {'alpha','gamma','SSVEP','all'};
+elecGroups = {'Parieto-Occipital','Frontal','Centro-Parietal','Fronto-Central','Temporal','all'};
 
-for i= 1:5
+for i= 1:6
     clear data mBars eBars
-    
     data = squeeze(dPrimeVals(:,i,:));
     for iBar = 1:size(dPrimeVals,3)
         mBars(iBar) = mean(data(:,iBar),1,nanFlag); %#ok<*SAGROW>
@@ -59,13 +60,21 @@ for i= 1:5
     end
     if i<=3
         errorbar(hPlot(1,i),1:length(mBars),mBars,eBars,'.','color','k');
-        ylim(hPlot(1,i),[-0.1 0.4]);
-        set(hPlot(1,i),'xTick',1:4,'xTickLabel',neuralMeasureLabels,'XTickLabelRotation',30,'yTick',-0.1:0.1:0.4,'yTickLabel',-0.1:0.1:0.4,'fontSize',fontSize,'TickDir','out','TickLength',2*tickLength)
+        set(hPlot(1,i),'xTick',1:4,'xTickLabel',neuralMeasureLabels,'XTickLabelRotation',30,'yTick',-0.3:0.1:0.3,'yTickLabel',-0.3:0.1:0.3,'fontSize',fontSize,'TickDir','out','TickLength',2*tickLength)
+        title(hPlot(1,i),elecGroups{i})
     else
         errorbar(hPlot(2,i-3),1:length(mBars),mBars,eBars,'.','color','k');
-        set(hPlot(2,i-3),'xTick',1:4,'xTickLabel',neuralMeasureLabels,'XTickLabelRotation',30,'yTick',-0.1:0.1:0.4,'yTickLabel',-0.1:0.1:0.4,'fontSize',fontSize,'TickDir','out','TickLength',2*tickLength)
+        set(hPlot(2,i-3),'xTick',1:4,'xTickLabel',neuralMeasureLabels,'XTickLabelRotation',30,'yTick',-0.3:0.1:0.3,'yTickLabel',-0.3:0.1:0.3,'fontSize',fontSize,'TickDir','out','TickLength',2*tickLength)
+        title(hPlot(2,i-3),elecGroups{i})
     end
 end
+
+xlim(hPlot(1,1),[0 length(neuralMeasureLabels)+1]);
+ylim(hPlot(1,1),[-0.3 0.3]);
+ylabel(hPlot(1,1),{'Neural d'' (Att-Ign)'})
+ylabel(hPlot(2,1),{'Neural d'' (Att-Ign)'})
+end
+
 
 % Accessory Functions
 function [data_allElecs, data_ElecGroupWise] = getDataForLDA(subjectIdx,powerData_AllElecs,powerData_GroupWise) % Process power data for LDA
@@ -91,14 +100,14 @@ for iSub = 1:length(subjectIdx)
                 
                 % Processing the data for alpha and gamma power
                 if strcmp(neuralMeasures{iNeuralMeasure},'alpha')||strcmp(neuralMeasures{iNeuralMeasure},'gamma')
-                    % Processing relevant electrode data from all 64 EEG electrodes 
-                    hits_AttData_allElecs{iSub,iElecGroup}{iCount,iNeuralMeasure} = powerDataTG_allElecs{att_Condition}(elecList,:,iNeuralMeasure)';
+                    % Processing relevant electrode data from all 64 EEG electrodes
+                    hits_AttData_allElecs{iSub,iElecGroup}{iCount,iNeuralMeasure} = powerDataTG_allElecs{att_Condition}(elecList,:,iNeuralMeasure)'; %#ok<*AGROW>
                     hits_IgnData_allElecs{iSub,iElecGroup}{iCount,iNeuralMeasure} = powerDataTG_allElecs{ign_Condition}(elecList,:,iNeuralMeasure)';
                     % Processing Group-wise electrode (averaged across electrodes in an electrode-group) data
                     hits_AttData_GroupWise{iSub}{iCount,iNeuralMeasure}(iElecGroup,:) = powerDataTG_GroupWise{elec_side,att_Condition}(iElecGroup,:,iNeuralMeasure)';
                     hits_IgnData_GroupWise{iSub}{iCount,iNeuralMeasure}(iElecGroup,:) = powerDataTG_GroupWise{elec_side,ign_Condition}(iElecGroup,:,iNeuralMeasure)';
                     
-                % Processing the data for SSVEP power since SSVEP freq should be selected based on the att/ign location for the set of contralateral electrodes    
+                    % Processing the data for SSVEP power since SSVEP freq should be selected based on the att/ign location for the set of contralateral electrodes
                 elseif strcmp(neuralMeasures{iNeuralMeasure},'SSVEP')
                     hits_AttData_allElecs{iSub,iElecGroup}{iCount,iNeuralMeasure} = powerDataTG_allElecs{att_Condition}(elecList,:,SSVEPPos)';
                     hits_IgnData_allElecs{iSub,iElecGroup}{iCount,iNeuralMeasure} = powerDataTG_allElecs{ign_Condition}(elecList,:,SSVEPPos)';
@@ -116,60 +125,122 @@ data_ElecGroupWise.attData = hits_AttData_GroupWise;
 data_ElecGroupWise.ignData = hits_IgnData_GroupWise;
 end
 
-function dPrimeVals = getProjection(data_allElecs,data_GroupWise,regFlag,transformType,numFolds,useEqualStimRepsFlag) %#ok<INUSL>
+% function dPrimeVals = getProjection(data_allElecs,regFlag,transformType,numFolds,useEqualStimRepsFlag)
+% TFs =[1 2]; % 1- Hits 2 - Miss
+% attLoc = [1 2];  % 1- Right 2 - Left
+% neuralMeasures = {'alpha','gamma','SSVEP'};
+% dPrimeVals = zeros(size(data_allElecs.attData,1),size(data_allElecs.attData,2),length(neuralMeasures)+1);
+%
+% % Computing d' values for all Subjects x all elec Groups x all Neural
+% % measures where LDA was performed on n-electrode dataset for all the
+% % trials
+% for iSub = 1:size(data_allElecs.attData,1)
+%     disp(['Processing data for Sub: ' num2str(iSub)])
+%     for iElecGroup = 1:size(data_allElecs.attData,2)
+%         for iNeuralMeasure = 1:length(neuralMeasures)
+%             dPrimeTMP = zeros(1,length(TFs)*length(attLoc));
+%             for iCond = 1:length(TFs)*length(attLoc)
+%                 data1 = data_allElecs.attData{iSub,iElecGroup}{iCond,iNeuralMeasure}';
+%                 data2 = data_allElecs.ignData{iSub,iElecGroup}{iCond,iNeuralMeasure}';
+%                 data1 = data1(all(~isnan(data1),2),:); % removing Bad Electrode data
+%                 data2 = data2(all(~isnan(data2),2),:); % removing Bad Electrode data
+%                 N1 = size(data1,2);
+%                 N2 = size(data2,2);
+%
+%                 % if att/ign data for a subject is empty because all
+%                 % electrodes in a group are bad electrodes
+%                 if isempty(data1)||isempty(data2)
+%                     dPrimeTMP(iCond) = NaN;
+%                 else
+%                     [testingIndices1,testingIndices2] = getIndices(N1,N2,numFolds,useEqualStimRepsFlag);
+%                     [~,p1{iCond},p2{iCond},allIndices1,allIndices2] = getProjectionsAndWeightVector(data1,data2,testingIndices1,testingIndices2,transformType,regFlag);
+%                     dPrimeTMP(iCond) = getDPrime(p1{iCond}(allIndices1),p2{iCond}(allIndices2));
+%                 end
+%             end
+%             dPrimeVals(iSub,iElecGroup,iNeuralMeasure) = mean(dPrimeTMP,2,'omitnan');
+%         end
+%     end
+% end
+%
+% % computing d' values for all Neural measures combined (n-electrode data
+% % has been pooled and LDA was performed on this pooled dataset for all the
+% % trials
+%
+% for iSub = 1:size(data_allElecs.attData,1)
+%     disp(['Processing Combined data for Sub: ' num2str(iSub)])
+%     for iElecGroup = 1:size(data_allElecs.attData,2)
+%         for iCond = 1:length(TFs)*length(attLoc)
+%             clear attDataTMP ignDataTMP
+%             for iNeuralMeasure = 1:length(neuralMeasures)
+%                 attDataTMP(iNeuralMeasure,:,:) = data_allElecs.attData{iSub,iElecGroup}{iCond,iNeuralMeasure}'; %#ok<*AGROW>
+%                 ignDataTMP(iNeuralMeasure,:,:) = data_allElecs.ignData{iSub,iElecGroup}{iCond,iNeuralMeasure}';
+%             end
+%
+%             % concatenating n-electrode dataset
+%             data1 = reshape(attDataTMP,[length(neuralMeasures)*size(attDataTMP,2) size(attDataTMP,3)]);
+%             data2 = reshape(ignDataTMP,[length(neuralMeasures)*size(attDataTMP,2) size(ignDataTMP,3)]);
+%             data1 = data1(all(~isnan(data1),2),:); % removing Bad Electrode data
+%             data2 = data2(all(~isnan(data2),2),:); % removing Bad Electrode data
+%             N1 = size(data1,2);
+%             N2 = size(data2,2);
+%
+%             % if att/ign data for a subject is empty because all
+%             % electrodes in a group are bad electrodes
+%             if isempty(data1)||isempty(data2)
+%                 dPrimeTMP(iCond) = NaN;
+%             else
+%                 [testingIndices1,testingIndices2] = getIndices(N1,N2,numFolds,useEqualStimRepsFlag);
+%                 [~,p1,p2,allIndices1,allIndices2] = getProjectionsAndWeightVector(data1,data2,testingIndices1,testingIndices2,transformType,regFlag);
+%                 dPrimeTMP(iCond) = getDPrime(p1(allIndices1),p2(allIndices2));
+%             end
+%         end
+%         dPrimeVals(iSub,iElecGroup,iNeuralMeasure+1) = mean(dPrimeTMP,2,'omitnan');
+%     end
+% end
+%
+% end
+function dPrimeVals = getProjection_v2(data_ElecGroupWise,regFlag,transformType,numFolds,useEqualStimRepsFlag)
 TFs =[1 2]; % 1- Hits 2 - Miss
 attLoc = [1 2];  % 1- Right 2 - Left
 neuralMeasures = {'alpha','gamma','SSVEP'};
-dPrimeVals = zeros(size(data_allElecs.attData,1),size(data_allElecs.attData,2),length(neuralMeasures)+1);
+elecGroups = {'PO','F','CP','FC','T'};
+dPrimeVals = zeros(size(data_ElecGroupWise.attData,2),length(elecGroups)+1,length(neuralMeasures)+1);
 
 % Computing d' values for all Subjects x all elec Groups x all Neural
-% measures where LDA was performed on n-electrode dataset for all the
-% trials
-for iSub = 1:size(data_allElecs.attData,1)
+% measures
+for iSub = 1:size(data_ElecGroupWise.attData,2)
     disp(['Processing data for Sub: ' num2str(iSub)])
-    for iElecGroup = 1:size(data_allElecs.attData,2)
+    for iElecGroup = 1:length(elecGroups)
         for iNeuralMeasure = 1:length(neuralMeasures)
             dPrimeTMP = zeros(1,length(TFs)*length(attLoc));
             for iCond = 1:length(TFs)*length(attLoc)
-                data1 = data_allElecs.attData{iSub,iElecGroup}{iCond,iNeuralMeasure}';
-                data2 = data_allElecs.ignData{iSub,iElecGroup}{iCond,iNeuralMeasure}';
-                data1 = data1(all(~isnan(data1),2),:); % removing Bad Electrode data
-                data2 = data2(all(~isnan(data2),2),:); % removing Bad Electrode data
-                N1 = size(data1,2);
-                N2 = size(data2,2);
-                
-                % if att/ign data for a subject is empty because all
-                % electrodes in a group are bad electrodes
-                if isempty(data1)||isempty(data2)
-                    dPrimeTMP(iCond) = NaN;
-                else
-                    [testingIndices1,testingIndices2] = getIndices(N1,N2,numFolds,useEqualStimRepsFlag);
-                    [~,p1{iCond},p2{iCond},allIndices1,allIndices2] = getProjectionsAndWeightVector(data1,data2,testingIndices1,testingIndices2,transformType,regFlag);
-                    dPrimeTMP(iCond) = getDPrime(p1{iCond}(allIndices1),p2{iCond}(allIndices2));
-                end
+                clear data1 data2
+                data1 = data_ElecGroupWise.attData{iSub}{iCond,iNeuralMeasure}(iElecGroup,:);
+                data2 = data_ElecGroupWise.ignData{iSub}{iCond,iNeuralMeasure}(iElecGroup,:);
+                dPrimeTMP(iCond) = getDPrime(data1,data2);
             end
             dPrimeVals(iSub,iElecGroup,iNeuralMeasure) = mean(dPrimeTMP,2,'omitnan');
         end
     end
 end
 
-% computing d' values for all Neural measures combined (n-electrode data
-% has been pooled and LDA was performed on this pooled dataset for all the
-% trials
+% computing d' values for all Neural measures pooled together
+% and LDA was performed on this pooled dataset for all the
+% trials and saving them in all Subjects x all elec Groups x
+% allNeuralMeasures +1
 
-for iSub = 1:size(data_allElecs.attData,1)
+for iSub = 1:size(data_ElecGroupWise.attData,2)
     disp(['Processing Combined data for Sub: ' num2str(iSub)])
-    for iElecGroup = 1:size(data_allElecs.attData,2)
+    for iElecGroup = 1:length(elecGroups)
         for iCond = 1:length(TFs)*length(attLoc)
-            clear attDataTMP ignDataTMP
+            clear attDataTMP ignDataTMP data1 data2
             for iNeuralMeasure = 1:length(neuralMeasures)
-                attDataTMP(iNeuralMeasure,:,:) = data_allElecs.attData{iSub,iElecGroup}{iCond,iNeuralMeasure}'; %#ok<*AGROW>
-                ignDataTMP(iNeuralMeasure,:,:) = data_allElecs.ignData{iSub,iElecGroup}{iCond,iNeuralMeasure}';
+                attDataTMP(iNeuralMeasure,:) = data_ElecGroupWise.attData{iSub}{iCond,iNeuralMeasure}(iElecGroup,:); %#ok<*AGROW>
+                ignDataTMP(iNeuralMeasure,:) = data_ElecGroupWise.ignData{iSub}{iCond,iNeuralMeasure}(iElecGroup,:);
             end
             
-            % concatenating n-electrode dataset
-            data1 = reshape(attDataTMP,[length(neuralMeasures)*size(attDataTMP,2) size(attDataTMP,3)]);
-            data2 = reshape(ignDataTMP,[length(neuralMeasures)*size(attDataTMP,2) size(ignDataTMP,3)]);
+            data1 = attDataTMP;
+            data2 = ignDataTMP;
             data1 = data1(all(~isnan(data1),2),:); % removing Bad Electrode data
             data2 = data2(all(~isnan(data2),2),:); % removing Bad Electrode data
             N1 = size(data1,2);
@@ -185,8 +256,75 @@ for iSub = 1:size(data_allElecs.attData,1)
                 dPrimeTMP(iCond) = getDPrime(p1(allIndices1),p2(allIndices2));
             end
         end
-        dPrimeVals(iSub,iElecGroup,iNeuralMeasure+1) = mean(dPrimeTMP,2,'omitnan');
+        dPrimeVals(iSub,iElecGroup,length(neuralMeasures)+1) = mean(dPrimeTMP,2,'omitnan');
     end
+end
+
+% computing d' values for all electrode groups combined and
+% LDA was performed on this pooled dataset for all the trials
+% and saving them in all Subjects x all elec Groups+1 x
+% allNeuralMeasures
+
+for iSub = 1:size(data_ElecGroupWise.attData,2)
+    disp(['Processing Combined data for Sub: ' num2str(iSub)])
+    for iNeuralMeasure = 1:length(neuralMeasures)
+        clear attDataTMP ignDataTMP clear data1 data2
+        for iCond = 1:length(TFs)*length(attLoc)
+            attDataTMP = data_ElecGroupWise.attData{iSub}{iCond,iNeuralMeasure}; %#ok<*AGROW>
+            ignDataTMP = data_ElecGroupWise.ignData{iSub}{iCond,iNeuralMeasure};
+            
+            data1 = attDataTMP;
+            data2 = ignDataTMP;
+            data1 = data1(all(~isnan(data1),2),:); % removing Bad Electrode data
+            data2 = data2(all(~isnan(data2),2),:); % removing Bad Electrode data
+            N1 = size(data1,2);
+            N2 = size(data2,2);
+            
+            % if att/ign data for a subject is empty because all
+            % electrodes in a group are bad electrodes
+            if isempty(data1)||isempty(data2)
+                dPrimeTMP(iCond) = NaN;
+            else
+                [testingIndices1,testingIndices2] = getIndices(N1,N2,numFolds,useEqualStimRepsFlag);
+                [~,p1,p2,allIndices1,allIndices2] = getProjectionsAndWeightVector(data1,data2,testingIndices1,testingIndices2,transformType,regFlag);
+                dPrimeTMP(iCond) = getDPrime(p1(allIndices1),p2(allIndices2));
+            end
+        end
+        dPrimeVals(iSub,length(elecGroups)+1,iNeuralMeasure) = mean(dPrimeTMP,2,'omitnan');
+    end
+end
+
+% computing d' values for all electrode groups and all neural measures
+% pooled together and LDA was performed on this pooled dataset for all
+% the trials and saving them in all Subjects x all elec Groups+1 x
+% allNeuralMeasures+1
+for iSub = 1:size(data_ElecGroupWise.attData,2)
+    disp(['Processing Combined data for Sub: ' num2str(iSub)])
+    for iCond = 1:length(TFs)*length(attLoc)
+            clear attDataTMP ignDataTMP clear data1 data2            
+        for iNeuralMeasure = 1:length(neuralMeasures)
+            attDataTMP(iNeuralMeasure,:,:) = data_ElecGroupWise.attData{iSub}{iCond,iNeuralMeasure}; %#ok<*AGROW>
+            ignDataTMP(iNeuralMeasure,:,:) = data_ElecGroupWise.ignData{iSub}{iCond,iNeuralMeasure};
+        end
+        % concatenating neuralMeasures and electrodeGroups dataset
+        data1 = reshape(attDataTMP,[length(neuralMeasures)*length(elecGroups) size(attDataTMP,3)]);
+        data2 = reshape(ignDataTMP,[length(neuralMeasures)*length(elecGroups) size(ignDataTMP,3)]);
+        data1 = data1(all(~isnan(data1),2),:); % removing Bad Electrode data
+        data2 = data2(all(~isnan(data2),2),:); % removing Bad Electrode data
+        N1 = size(data1,2);
+        N2 = size(data2,2);
+        
+        % if att/ign data for a subject is empty because all
+        % electrodes in a group are bad electrodes
+        if isempty(data1)||isempty(data2)
+            dPrimeTMP(iCond) = NaN;
+        else
+            [testingIndices1,testingIndices2] = getIndices(N1,N2,numFolds,useEqualStimRepsFlag);
+            [~,p1,p2,allIndices1,allIndices2] = getProjectionsAndWeightVector(data1,data2,testingIndices1,testingIndices2,transformType,regFlag);
+            dPrimeTMP(iCond) = getDPrime(p1(allIndices1),p2(allIndices2));
+        end
+    end
+    dPrimeVals(iSub,length(elecGroups)+1,length(neuralMeasures)+1) = mean(dPrimeTMP,2,'omitnan');
 end
 
 end
