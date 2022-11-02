@@ -12,7 +12,7 @@ cd(filePath); cd ..
 addpath(genpath(pwd));
 folderSourceString = fullfile(pwd,'analyzedData');
 
-subjectIdx = 1:26; % Select more than one Subject. Numbers 1-26 are subject IDs.
+subjectIdx = 1:26; % Numbers 1-26 are subject IDs.
 badTrialStr = 'v10'; % bad Trial Version used
 colorMap ='jet'; % Topoplot color scheme;
 topoplot_style = 'both'; % Draws Contour Maps and Electrodes

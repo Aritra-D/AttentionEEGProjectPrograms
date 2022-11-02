@@ -47,7 +47,7 @@ cL_Unipolar = load(fullfile('C:\Users\RayLabPC-Aritra\Dropbox\Lab Workbench','Pr
 chanlocs = cL_Unipolar.chanlocs;
 fontSize = 14;
 colors = {'k','r','c'}; % Colors for Barplots
-elecGroups = {'Parieto-occipital','Frontal','Centro-parietal','Frontro-central','Temporal'};
+elecGroups = {'PO','F','CP','FC','T'}; % PO: Parieto-Occipital; F: Frontal; CP: Centro-Parietal, FC: Frontro-Central; T: Temporal
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% static stimuli %%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -452,19 +452,20 @@ end
 end
 
 function [elecsLeft,elecsRight] = getElectrodeGroupInformation(elecGroup)
-if strcmp(elecGroup,'Parieto-occipital')
+
+if strcmp(elecGroup,'PO')
     elecsLeft = [24 29 57 61];
     elecsRight = [26 31 58 63];
-elseif strcmp(elecGroup,'Frontal')
+elseif strcmp(elecGroup,'F')
     elecsLeft = [1 33 34 3 37 4];
     elecsRight = [2 35 36 6 40 7];
-elseif strcmp(elecGroup,'Centro-parietal')
+elseif strcmp(elecGroup,'CP')
     elecsLeft = [18 19 52 23 56];
     elecsRight = [20 21 27 54 59];
-elseif strcmp(elecGroup,'Fronto-central')
+elseif strcmp(elecGroup,'FC')
     elecsLeft = [8 9 13 43 47 48];
     elecsRight = [10 11 15 44 49 50];
-elseif strcmp(elecGroup,'Temporal')
+elseif strcmp(elecGroup,'T')
     elecsLeft = [12 17 41 42 51];
     elecsRight = [16 22 45 46 55];
 end
