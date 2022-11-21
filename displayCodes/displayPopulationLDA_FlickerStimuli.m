@@ -31,20 +31,23 @@ end
 dPrimeVals = getProjection_v2(data_ElecGroupWise,regFlag,transformType,numFolds,useEqualStimRepsFlag);
 nanFlag = 'omitnan'; % NaN Values are processed using this flag during averaging
 
+
 % Display options
-hFig = figure;
-set(hFig,'units','normalized','outerPosition',[0 0 1 1]);
-hPlot = getPlotHandles(2,3,[0.1 0.1, 0.8 0.8],0.1,0.14,0); linkaxes(hPlot)
 fontSize = 14;
-tickLength = get(hPlot(1,1),'TickLength');
 
 colors = {'k','r','c','m'};
 neuralMeasureLabels = {'alpha','gamma','SSVEP','all'};
 elecGroups = {'Parieto-Occipital','Frontal','Centro-Parietal','Fronto-Central','Temporal','all'};
 
+% Plotting Figure 1
+hFig1 = figure;
+set(hFig1,'units','normalized','outerPosition',[0 0 1 1]);
+hPlot = getPlotHandles(2,3,[0.1 0.1, 0.8 0.8],0.1,0.14,0); linkaxes(hPlot)
+tickLength = get(hPlot(1,1),'TickLength');
+
 for i= 1:6
     clear data mBars eBars
-    data = squeeze(dPrimeVals(:,i,:));
+    data = squeeze(dPrimeVals(:,i,:,end));
     for iBar = 1:size(dPrimeVals,3)
         mBars(iBar) = mean(data(:,iBar),1,nanFlag); %#ok<*SAGROW>
         eBars(iBar) = std(data(:,iBar),[],1,nanFlag)./sqrt(size(data,1));
@@ -73,6 +76,67 @@ xlim(hPlot(1,1),[0 length(neuralMeasureLabels)+1]);
 ylim(hPlot(1,1),[-0.3 0.3]);
 ylabel(hPlot(1,1),{'Neural d'' (Att-Ign)'})
 ylabel(hPlot(2,1),{'Neural d'' (Att-Ign)'})
+
+% Plotting Figure 2
+hFig2 = figure;
+set(hFig2,'units','normalized','outerPosition',[0 0 1 1]);
+hPlot2 = getPlotHandles(4,6,[0.07 0.05, 0.9 0.9],0.02,0.01,0); linkaxes(hPlot2)
+
+AttCondColors = {[0 0.4470 0.7410],[0.8500 0.3250 0.0980], [0.9290 0.6940 0.1250], [0.4660 0.6740 0.1880]};
+
+for i= 1:4
+    for iElecGroup = 1:6
+        for j = 1:26
+            clear data
+            data = squeeze(dPrimeVals(j,iElecGroup,i,1:4));
+            mBars(j) = mean(data,1,nanFlag);
+            eBars(j) = std(data,[],1,nanFlag);
+            subplot(hPlot2(i,iElecGroup)); hold(hPlot2(i,iElecGroup),'on');
+            barPlot = bar(j,mBars(j));
+            barPlot.FaceColor = colors{i};
+            for iAttCon = 1: length(data)
+                plot(j,data(iAttCon),'o','MarkerSize',4,'MarkerEdgeColor','k','MarkerFaceColor',AttCondColors{iAttCon})
+            end
+        end
+    end
+end
+ylim(hPlot2(1,1),[-1 2]);
+xlim(hPlot2(1,1),[0 27]);
+
+for i=1:4
+    for j = 1:6
+        if (i==1 || i==3) && (j==1||j==3||j==5)
+        set(hPlot2(i,j),'fontSize',fontSize,'xTick',5:5:25,'xTickLabel',5:5:25,'yTick',-1:1:2,'yTickLabel',-1:1:2,'TickDir','out','TickLength',2*tickLength)
+        else
+        set(hPlot2(i,j),'fontSize',fontSize,'xTick',5:5:25,'xTickLabel',5:5:25,'yTick',-1:1:1,'yTickLabel',[],'TickDir','out','TickLength',2*tickLength)
+        end
+    end
+end
+
+
+ylabel(hPlot2(1,1),{'alpha' '(8-12 Hz)'})
+ylabel(hPlot2(2,1),{'gamma' '(25-70 Hz)'})
+ylabel(hPlot2(3,1),{'Trial-by-trial' 'SSVEP'})
+ylabel(hPlot2(4,1),'all Measures')
+
+title(hPlot2(1,1),'Parieto-Occipital')
+title(hPlot2(1,2),'Frontal')
+title(hPlot2(1,3),'Centro-Parietal')
+title(hPlot2(1,4),'Fronto-Central')
+title(hPlot2(1,5),'Temporal')
+title(hPlot2(1,6),'all Elec Groups')
+
+
+xlabel(hPlot2(4,2),'Human Subjects')
+xlabel(hPlot2(4,4),'Human Subjects')
+xlabel(hPlot2(4,6),'Human Subjects')
+
+AttCondLabels = {'AttL12Hz','AttR12Hz','AttL16Hz','AttR16Hz'};
+
+for i=1:4
+    text(12,2-0.3*i,AttCondLabels{i},'color',AttCondColors{i},'fontSize',fontSize,'parent',hPlot2(1,1))
+end
+
 end
 
 
@@ -204,7 +268,9 @@ TFs =[1 2]; % 1- Hits 2 - Miss
 attLoc = [1 2];  % 1- Right 2 - Left
 neuralMeasures = {'alpha','gamma','SSVEP'};
 elecGroups = {'PO','F','CP','FC','T'};
+AttConditions = {'AttL12','AttR12','AttL16','AttR16'};
 dPrimeVals = zeros(size(data_ElecGroupWise.attData,2),length(elecGroups)+1,length(neuralMeasures)+1);
+
 
 % Computing d' values for all Subjects x all elec Groups x all Neural
 % measures
@@ -217,9 +283,10 @@ for iSub = 1:size(data_ElecGroupWise.attData,2)
                 clear data1 data2
                 data1 = data_ElecGroupWise.attData{iSub}{iCond,iNeuralMeasure}(iElecGroup,:);
                 data2 = data_ElecGroupWise.ignData{iSub}{iCond,iNeuralMeasure}(iElecGroup,:);
+                dPrimeVals(iSub,iElecGroup,iNeuralMeasure,iCond) = getDPrime(data1,data2);
                 dPrimeTMP(iCond) = getDPrime(data1,data2);
             end
-            dPrimeVals(iSub,iElecGroup,iNeuralMeasure) = mean(dPrimeTMP,2,'omitnan');
+            dPrimeVals(iSub,iElecGroup,iNeuralMeasure,length(AttConditions)+1) = mean(dPrimeTMP,2,'omitnan');
         end
     end
 end
@@ -249,14 +316,16 @@ for iSub = 1:size(data_ElecGroupWise.attData,2)
             % if att/ign data for a subject is empty because all
             % electrodes in a group are bad electrodes
             if isempty(data1)||isempty(data2)
+                dPrimeVals(iSub,iElecGroup,length(neuralMeasures)+1,iCond) = NaN;
                 dPrimeTMP(iCond) = NaN;
             else
                 [testingIndices1,testingIndices2] = getIndices(N1,N2,numFolds,useEqualStimRepsFlag);
                 [~,p1,p2,allIndices1,allIndices2] = getProjectionsAndWeightVector(data1,data2,testingIndices1,testingIndices2,transformType,regFlag);
+                dPrimeVals(iSub,iElecGroup,length(neuralMeasures)+1,iCond) = getDPrime(p1(allIndices1),p2(allIndices2));
                 dPrimeTMP(iCond) = getDPrime(p1(allIndices1),p2(allIndices2));
             end
         end
-        dPrimeVals(iSub,iElecGroup,length(neuralMeasures)+1) = mean(dPrimeTMP,2,'omitnan');
+        dPrimeVals(iSub,iElecGroup,length(neuralMeasures)+1,length(AttConditions)+1) = mean(dPrimeTMP,2,'omitnan');
     end
 end
 
@@ -284,13 +353,16 @@ for iSub = 1:size(data_ElecGroupWise.attData,2)
             % electrodes in a group are bad electrodes
             if isempty(data1)||isempty(data2)
                 dPrimeTMP(iCond) = NaN;
+                dPrimeVals(iSub,length(elecGroups)+1,iNeuralMeasure,iCond) = NaN;
+
             else
                 [testingIndices1,testingIndices2] = getIndices(N1,N2,numFolds,useEqualStimRepsFlag);
                 [~,p1,p2,allIndices1,allIndices2] = getProjectionsAndWeightVector(data1,data2,testingIndices1,testingIndices2,transformType,regFlag);
                 dPrimeTMP(iCond) = getDPrime(p1(allIndices1),p2(allIndices2));
+                dPrimeVals(iSub,length(elecGroups)+1,iNeuralMeasure,iCond) = getDPrime(p1(allIndices1),p2(allIndices2));
             end
         end
-        dPrimeVals(iSub,length(elecGroups)+1,iNeuralMeasure) = mean(dPrimeTMP,2,'omitnan');
+        dPrimeVals(iSub,length(elecGroups)+1,iNeuralMeasure,length(AttConditions)+1) = mean(dPrimeTMP,2,'omitnan');
     end
 end
 
@@ -318,13 +390,16 @@ for iSub = 1:size(data_ElecGroupWise.attData,2)
         % electrodes in a group are bad electrodes
         if isempty(data1)||isempty(data2)
             dPrimeTMP(iCond) = NaN;
+            dPrimeVals(iSub,length(elecGroups)+1,length(neuralMeasures)+1,iCond) = NaN;
+
         else
             [testingIndices1,testingIndices2] = getIndices(N1,N2,numFolds,useEqualStimRepsFlag);
             [~,p1,p2,allIndices1,allIndices2] = getProjectionsAndWeightVector(data1,data2,testingIndices1,testingIndices2,transformType,regFlag);
             dPrimeTMP(iCond) = getDPrime(p1(allIndices1),p2(allIndices2));
+            dPrimeVals(iSub,length(elecGroups)+1,length(neuralMeasures)+1,iCond) = getDPrime(p1(allIndices1),p2(allIndices2));
         end
     end
-    dPrimeVals(iSub,length(elecGroups)+1,length(neuralMeasures)+1) = mean(dPrimeTMP,2,'omitnan');
+    dPrimeVals(iSub,length(elecGroups)+1,length(neuralMeasures)+1,length(AttConditions)+1) = mean(dPrimeTMP,2,'omitnan');
 end
 
 end
